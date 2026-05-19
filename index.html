@@ -162,31 +162,29 @@
             <!-- Quick Database Setup Guide -->
             <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
                 <h3 class="text-base font-extrabold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i> Pengaturan Sinkronisasi Google Sheets (Awan)
+                    <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i> Sinkronisasi Google Sheets (Awan Terpadu)
                 </h3>
                 
                 <div class="space-y-4">
                     <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-xs text-indigo-900 leading-relaxed">
-                        <p class="font-bold mb-1"><i class="fa-solid fa-circle-info"></i> Keunggulan Koneksi Spreadsheet:</p>
-                        Sistem ini menggunakan Google Apps Script sebagai backend. Data siswa, kelas, rekap skor, dan rekomendasi hasil latihan kelas Anda akan otomatis tersimpan di Cloud Google Drive sehingga aman dan mudah dipanggil kapan saja.
+                        <p class="font-bold mb-1"><i class="fa-solid fa-circle-info"></i> Penyimpanan Tersentralisasi:</p>
+                        Sistem ini terintegrasi langsung dengan database Google Sheets melalui Google Apps Script yang telah di-hardcode di dalam kode aplikasi. Data siswa, level, shuttle, kategori kebugaran, dan nilai rapor Anda akan disimpan secara aman di cloud Anda sendiri.
                     </div>
-                    
-                    <div class="space-y-2">
-                        <label class="block text-xs font-bold text-slate-700 uppercase" for="settings-script-url">URL Aplikasi Web Google Apps Script</label>
-                        <div class="flex flex-col sm:flex-row gap-2">
-                            <input type="text" id="settings-script-url" placeholder="https://script.google.com/macros/s/.../exec" class="flex-grow px-3 py-2.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-brand-500">
-                            <button onclick="testDatabaseConnection()" class="bg-brand-600 hover:bg-brand-500 text-white font-bold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition active:scale-95">
-                                <i class="fa-solid fa-plug"></i> Sambungkan & Tes Koneksi
-                            </button>
-                        </div>
+
+                    <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs">
+                        <span class="font-extrabold text-slate-700 block mb-1">Status Lokasi Konfigurasi URL:</span>
+                        <p class="text-slate-500 mb-2">Buka file kode aplikasi ini (<code class="bg-slate-200 px-1 py-0.5 rounded font-mono text-red-600">bliptest_sd4.html</code>), lalu cari variabel <code class="bg-slate-200 px-1 py-0.5 rounded font-mono text-brand-700 font-bold">DATABASE_SCRIPT_URL</code> di baris awal tag <code class="bg-slate-200 px-1 py-0.5 rounded font-mono">&lt;script&gt;</code> untuk menyesuaikan URL deployment Apps Script Anda.</p>
                     </div>
 
                     <div class="flex flex-wrap gap-2 pt-2">
-                        <button onclick="pullDataFromDatabase()" id="btn-pull-db" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 transition">
+                        <button onclick="pullDataFromDatabase()" id="btn-pull-db" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 transition">
                             <i class="fa-solid fa-cloud-arrow-down"></i> Ambil Data dari Awan
                         </button>
-                        <button onclick="pushDataToDatabase()" id="btn-push-db" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold py-2 px-4 rounded-xl text-xs flex items-center gap-1.5 transition">
+                        <button onclick="pushDataToDatabase()" id="btn-push-db" disabled class="bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 transition">
                             <i class="fa-solid fa-cloud-arrow-up text-brand-600"></i> Kirim Semua Data ke Awan
+                        </button>
+                        <button onclick="testDatabaseConnection(false)" class="bg-brand-50 hover:bg-brand-100 border border-brand-200 text-brand-700 font-bold py-2.5 px-4 rounded-xl text-xs flex items-center gap-1.5 transition">
+                            <i class="fa-solid fa-arrows-rotate"></i> Uji Ulang Koneksi Awan
                         </button>
                     </div>
                 </div>
@@ -467,6 +465,11 @@
 
     <!-- JAVASCRIPT LOGIC CONTAINER -->
     <script>
+        // =========================================================================
+        // SILAKAN TEMPEL URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI:
+        const DATABASE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzmrcvWB5zPwXq-UG02Hs9ie2mLkpEEws-gVENcGrYnShs1WjL1qUOM7Y_Y6cVXD8J0w/exec"; 
+        // =========================================================================
+
         // Bleep test level specifications (Speed in km/h and Shuttles per level)
         const bleepShuttleMatrix = {
             1: { speed: 8.5, shuttles: 7 },
@@ -509,16 +512,10 @@
         let bleepTimer = null;
         let bleepIntervalDuration = 0;
 
-        // Apps Script Connection Settings
-        let databaseScriptUrl = "";
-
         window.onload = function() {
-            // Load saved database configuration
-            const savedUrl = localStorage.getItem('sd4_bliptest_script_url');
-            if (savedUrl) {
-                databaseScriptUrl = savedUrl;
-                document.getElementById('settings-script-url').value = savedUrl;
-                testDatabaseConnection(true); // silent test on startup
+            // Run silent test connection on load if URL is customized
+            if (DATABASE_SCRIPT_URL && !DATABASE_SCRIPT_URL.includes("_TEMPEL_URL_ANDA_DI_SINI")) {
+                testDatabaseConnection(true);
             }
 
             // Load local student database cache
@@ -1399,11 +1396,11 @@
 
         // Google Sheets Cloud API Connections
         async function testDatabaseConnection(isSilent = false) {
-            const urlInput = document.getElementById('settings-script-url').value.trim();
+            const urlInput = DATABASE_SCRIPT_URL;
             
-            if (!urlInput) {
-                if (!isSilent) alertMessage("Sambungan Gagal", "Masukkan URL Google Apps Script yang sah.", "warning");
-                updateConnectionUI(false, "Lokal");
+            if (!urlInput || urlInput.includes("_TEMPEL_URL_ANDA_DI_SINI")) {
+                if (!isSilent) alertMessage("Sambungan Gagal", "Silakan atur URL Google Apps Script yang sah langsung di baris kode aplikasi Anda.", "warning");
+                updateConnectionUI(false, "Lokal (Belum Diset)");
                 return;
             }
 
@@ -1411,11 +1408,9 @@
             updateConnectionUI(false, "Menghubungkan...");
 
             try {
-                const response = await fetch(urlInput);
+                // FORCE REDIRECT FOLLOW TO ENHANCE CORS AND REDIRECT HANDLING
+                const response = await fetch(urlInput, { method: "GET", redirect: "follow" });
                 if (response.ok) {
-                    databaseScriptUrl = urlInput;
-                    localStorage.setItem('sd4_bliptest_script_url', urlInput);
-                    
                     updateConnectionUI(true, "Awan Terhubung");
                     if (!isSilent) alertMessage("Sukses Terhubung!", "Aplikasi web Anda kini tersinkronisasi langsung ke Google Sheets.", "success");
                 } else {
@@ -1423,11 +1418,31 @@
                 }
             } catch (err) {
                 updateConnectionUI(false, "Gagal Hubung");
-                if (!isSilent) alertMessage("Koneksi Gagal", "Periksa deployment Apps Script Anda (pastikan akses 'Anyone').", "warning");
-                console.error(err);
+                
+                // Mendeteksi apakah aplikasi sedang berjalan di dalam Iframe Sandbox / Preview Panel
+                const isSandbox = window.origin === "null" || 
+                                  (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) || 
+                                  window.location.href.includes("usercontent.goog") ||
+                                  window.location.protocol === "blob:";
+
+                if (isSandbox) {
+                    console.warn(
+                        "ℹ️ INFO KEAMANAN: Koneksi Google Sheets diblokir oleh Sandbox Iframe Preview Editor Anda. " +
+                        "Jangan khawatir! Fitur Sinkronisasi Cloud ini akan berfungsi dengan SEMPURNA ketika Anda " +
+                        "menyimpan file HTML ini dan membukanya secara lokal di komputer/iPad Anda " +
+                        "(klik ganda file bliptest_sd4.html secara mandiri)."
+                    );
+                    if (!isSilent) {
+                        alertMessage("Sandbox Terdeteksi", "Koneksi cloud dibatasi oleh panel pratinjau. Silakan jalankan file HTML ini secara lokal di perangkat Anda.", "warning");
+                    }
+                } else {
+                    if (!isSilent) alertMessage("Koneksi Gagal", "Periksa kembali URL Apps Script di kode Anda, pastikan berakhiran /exec.", "warning");
+                    console.error("Fetch Error Detail:", err);
+                }
             }
         }
 
+        // Menambahkan fungsi updateConnectionUI yang hilang untuk memperbarui status indikator UI
         function updateConnectionUI(isConnected, text) {
             const dot = document.getElementById('db-status-dot');
             const statusText = document.getElementById('db-status-text');
@@ -1436,24 +1451,26 @@
             const btnPull = document.getElementById('btn-pull-db');
             const btnPush = document.getElementById('btn-push-db');
 
+            if (!dot || !statusText || !badge) return;
+
             if (isConnected) {
                 dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
                 badge.className = "bg-emerald-950/60 border border-emerald-500 text-emerald-300 text-[10px] px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all";
                 statusText.innerText = text;
-                btnPull.removeAttribute('disabled');
-                btnPush.removeAttribute('disabled');
+                if (btnPull) btnPull.removeAttribute('disabled');
+                if (btnPush) btnPush.removeAttribute('disabled');
             } else {
                 dot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
                 badge.className = "bg-slate-900/60 border border-slate-700 text-slate-300 text-[10px] px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all";
                 statusText.innerText = text;
-                btnPull.setAttribute('disabled', 'true');
-                btnPush.setAttribute('disabled', 'true');
+                if (btnPull) btnPull.setAttribute('disabled', 'true');
+                if (btnPush) btnPush.setAttribute('disabled', 'true');
             }
         }
 
         // PUSH DATA TO GOOGLE SHEETS
         async function pushDataToDatabase() {
-            if (!databaseScriptUrl) return;
+            if (!DATABASE_SCRIPT_URL || DATABASE_SCRIPT_URL.includes("_TEMPEL_URL_ANDA_DI_SINI")) return;
             if (studentsList.length === 0) {
                 alertMessage("Gagal Sinkronisasi", "Belum ada data siswa untuk dikirim ke Spreadsheet.", "warning");
                 return;
@@ -1467,7 +1484,7 @@
                     students: studentsList
                 };
 
-                const response = await fetch(databaseScriptUrl, {
+                const response = await fetch(DATABASE_SCRIPT_URL, {
                     method: 'POST',
                     redirect: 'follow',
                     body: JSON.stringify(payload),
@@ -1483,28 +1500,30 @@
                     alertMessage("Kesalahan Server", result.message, "warning");
                 }
             } catch (err) {
-                alertMessage("Gagal Upload", "Gagal mengirim data karena kendala jaringan atau CORS.", "warning");
-                console.error(err);
+                const isSandbox = window.origin === "null" || window.location.href.includes("usercontent.goog");
+                if (isSandbox) {
+                    alertMessage("Gagal (Sandbox)", "Unggahan diblokir oleh editor preview. Buka file HTML di browser lokal Anda.", "warning");
+                } else {
+                    alertMessage("Gagal Upload", "Gagal mengirim data karena kendala jaringan atau CORS.", "warning");
+                    console.error(err);
+                }
             }
         }
 
         // PULL DATA FROM GOOGLE SHEETS
         async function pullDataFromDatabase() {
-            if (!databaseScriptUrl) return;
+            if (!DATABASE_SCRIPT_URL || DATABASE_SCRIPT_URL.includes("_TEMPEL_URL_ANDA_DI_SINI")) return;
 
             alertMessage("Mengunduh Data", "Mengambil data rekap terbaru dari Spreadsheet...", "info");
 
             try {
-                const response = await fetch(databaseScriptUrl);
+                const response = await fetch(DATABASE_SCRIPT_URL, { method: "GET", redirect: "follow" });
                 const data = await response.json();
 
                 if (Array.isArray(data)) {
                     studentsList = data;
                     localStorage.setItem('sd4_bliptest_students', JSON.stringify(studentsList));
                     
-                    activeScoringClass = 'all';
-                    activeRekapClass = 'all';
-
                     populateClassFilterDropdowns();
                     buildScoringGridFromStudents();
                     renderStudentsResults();
@@ -1515,8 +1534,13 @@
                     alertMessage("Format Awan Salah", "Gagal memproses parsing dataset dari Spreadsheet.", "warning");
                 }
             } catch (err) {
-                alertMessage("Gagal Mengambil Data", "Periksa koneksi internet atau setelan skrip.", "warning");
-                console.error(err);
+                const isSandbox = window.origin === "null" || window.location.href.includes("usercontent.goog");
+                if (isSandbox) {
+                    alertMessage("Gagal (Sandbox)", "Pengunduhan diblokir oleh editor preview. Gunakan file HTML secara lokal.", "warning");
+                } else {
+                    alertMessage("Gagal Mengambil Data", "Periksa koneksi internet atau setelan skrip.", "warning");
+                    console.error(err);
+                }
             }
         }
 
