@@ -203,7 +203,7 @@
                     </div>
                     <div>
                         <button onclick="downloadCSVTemplate()" class="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
-                            <i class="fa-solid fa-download"></i> Unduh Template Excel (CSV)
+                            <i class="fa-solid fa-download"></i> Unduh Template Excel (.xlsx)
                         </button>
                     </div>
                 </div>
@@ -375,7 +375,7 @@
                     
                     <div class="flex gap-2 w-full md:w-auto">
                         <button onclick="exportToCSV()" class="flex-1 md:flex-none bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-brand-700 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
-                            <i class="fa-solid fa-file-excel text-emerald-600"></i> Ekspor Excel (CSV)
+                            <i class="fa-solid fa-file-excel text-emerald-600"></i> Ekspor Excel (.xlsx)
                         </button>
                         <button onclick="triggerClearAllData()" class="flex-1 md:flex-none bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 px-3 rounded-xl text-xs flex items-center justify-center gap-1.5 transition">
                             <i class="fa-solid fa-trash-can"></i> Bersihkan Semua
@@ -674,20 +674,50 @@
             reader.readAsBinaryString(file);
         }
 
+        // Generate template Excel (.xlsx) asli
         function downloadCSVTemplate() {
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Nama Siswa,Jenis Kelamin (L/P),Kelas\r\n";
-            csvContent += "Ahmad Fauzi,L,4A\r\nSiti Rahmawati,P,4A\r\nBudi Santoso,L,4B\r\nDewi Lestari,P,4B\r\n";
-            
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "template_impor_bliptest.csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            alertMessage("Unduhan Berhasil", "Gunakan template ini untuk mengisi data siswa.", "info");
+            try {
+                // Buat data array 2 dimensi untuk template
+                const templateData = [
+                    ["Nama Siswa", "Jenis Kelamin (L/P)", "Kelas"],
+                    ["Budi Hermawan", "L", "4A"],
+                    ["Siti Rahmawati", "P", "4A"],
+                    ["Andi Saputra", "L", "4B"],
+                    ["Dewi Lestari", "P", "4B"]
+                ];
+                
+                // Buat workbook baru
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(templateData);
+                
+                // Atur lebar kolom otomatis agar tulisan tidak terpotong
+                ws['!cols'] = [
+                    { wch: 25 }, // Nama Siswa
+                    { wch: 20 }, // Jenis Kelamin (L/P)
+                    { wch: 10 }  // Kelas
+                ];
+
+                XLSX.utils.book_append_sheet(wb, ws, "Template PJOK");
+                
+                // Tulis file Excel langsung ke komputer (.xlsx)
+                XLSX.writeFile(wb, "template_impor_bliptest.xlsx");
+                
+                alertMessage("Unduhan Berhasil", "Berkas Excel asli (.xlsx) berhasil diunduh dengan sel terpisah rapi.", "success");
+            } catch (err) {
+                console.error("Gagal membuat XLSX, fallback ke CSV:", err);
+                
+                // Fallback aman menggunakan tanda pemisah eksplisit agar Excel Indonesia langsung mendeteksinya
+                let csvContent = "\uFEFFsep=,\r\nNama Siswa,Jenis Kelamin (L/P),Kelas\r\nBudi Hermawan,L,4A\r\nSiti Rahmawati,P,4A\r\nAndi Saputra,L,4B\r\nDewi Lestari,P,4B\r\n";
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", "template_impor_bliptest.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                alertMessage("Unduhan Berhasil", "Mendownload format CSV (Gunakan pemisah koma saat impor).", "info");
+            }
         }
 
         function populateClassFilterDropdowns() {
@@ -1567,39 +1597,90 @@
             }
         }
 
+        // Standard Excel (.xlsx) Data Exporter
         function exportToCSV() {
             if (studentsList.length === 0) {
                 alertMessage("Peringatan", "Tidak ada data siswa untuk diekspor.", "warning");
                 return;
             }
 
-            let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "Nama Siswa,Jenis Kelamin,Kelas,Level Terakhir,Shuttle Terakhir,Total Shuttle,Kategori Kebugaran,Sikap & Partisipasi,Nilai Akhir Gabungan\r\n";
+            try {
+                // Buat data array dengan baris header
+                const exportData = [
+                    ["Nama Siswa", "Jenis Kelamin", "Kelas", "Level Terakhir", "Shuttle Terakhir", "Total Shuttle", "Kategori Kebugaran", "Sikap & Partisipasi", "Nilai Akhir Gabungan"]
+                ];
 
-            studentsList.forEach(s => {
-                const row = [
-                    `"${s.name}"`,
-                    s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
-                    `"${s.class || '4'}"`,
-                    s.level,
-                    s.shuttle,
-                    s.totalShuttles,
-                    s.fitnessCategory,
-                    `"${s.effortLabel || 'Belum Dihitung'}"`,
-                    s.finalScore
-                ].join(",");
-                csvContent += row + "\r\n";
-            });
+                // Tambahkan data siswa baris demi baris
+                studentsList.forEach(s => {
+                    const effortDetails = getEffortDetails(s.effortRating);
+                    exportData.push([
+                        s.name,
+                        s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
+                        s.class || '4',
+                        s.level || 1,
+                        s.shuttle || 1,
+                        s.totalShuttles || 0,
+                        s.fitnessCategory || 'Belum Dihitung',
+                        effortDetails.label || 'Belum Dihitung',
+                        s.finalScore || 0
+                    ]);
+                });
 
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", "Rekap_BleepTest_SD4_" + new Date().toISOString().slice(0,10) + ".csv");
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            alertMessage("Sukses Ekspor", "Berkas CSV siap dibuka di Excel.", "success");
+                // Proses dengan SheetJS
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(exportData);
+                
+                // Atur lebar kolom otomatis agar rapi
+                ws['!cols'] = [
+                    { wch: 25 }, // Nama Siswa
+                    { wch: 15 }, // Jenis Kelamin
+                    { wch: 10 }, // Kelas
+                    { wch: 15 }, // Level Terakhir
+                    { wch: 15 }, // Shuttle Terakhir
+                    { wch: 15 }, // Total Shuttle
+                    { wch: 20 }, // Kategori Kebugaran
+                    { wch: 22 }, // Sikap & Partisipasi
+                    { wch: 20 }  // Nilai Akhir Gabungan
+                ];
+
+                XLSX.utils.book_append_sheet(wb, ws, "Rekap Evaluasi");
+                
+                // Simpan langsung sebagai berkas Excel .xlsx
+                XLSX.writeFile(wb, "Rekap_BleepTest_SD4_" + new Date().toISOString().slice(0,10) + ".xlsx");
+                
+                alertMessage("Sukses Ekspor", "Berkas Excel (.xlsx) siap dibuka di Microsoft Excel dengan kolom terpisah rapi.", "success");
+            } catch (err) {
+                console.error("Gagal melakukan ekspor XLSX, fallback ke CSV:", err);
+                
+                // Fallback CSV aman dengan instruksi separator eksplisit jika SheetJS bermasalah
+                let csvContent = "\uFEFFsep=,\r\nNama Siswa,Jenis Kelamin,Kelas,Level Terakhir,Shuttle Terakhir,Total Shuttle,Kategori Kebugaran,Sikap & Partisipasi,Nilai Akhir Gabungan\r\n";
+
+                studentsList.forEach(s => {
+                    const row = [
+                        `"${s.name}"`,
+                        s.gender === 'L' ? 'Laki-laki' : 'Perempuan',
+                        `"${s.class || '4'}"`,
+                        s.level,
+                        s.shuttle,
+                        s.totalShuttles,
+                        s.fitnessCategory,
+                        `"${s.effortLabel || 'Belum Dihitung'}"`,
+                        s.finalScore
+                    ].join(",");
+                    csvContent += row + "\r\n";
+                });
+
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.setAttribute("href", url);
+                link.setAttribute("download", "Rekap_BleepTest_SD4_" + new Date().toISOString().slice(0,10) + ".csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                alertMessage("Sukses Ekspor", "Mengekspor sebagai CSV fallback.", "success");
+            }
         }
 
         function alertMessage(title, message, type) {
