@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PJOK Smart Assessment</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Poppins', sans-serif; }
+        .score-btn { transition: all 0.2s ease; }
+        .score-btn:active { transform: scale(0.9); }
+        @media print {
+            .no-print { display: none; }
+            .print-card { border: 1px solid #ccc; box-shadow: none; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <nav class="bg-emerald-600 text-white shadow-md sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid font-bold fa-dumbbell text-2xl text-yellow-300"></i>
+                <span class="font-bold text-lg tracking-wide">PJOK Smart Assessment</span>
+            </div>
+            <div id="userInfo" class="hidden flex items-center space-x-3">
+                <span id="userEmail" class="text-sm bg-emerald-700 px-3 py-1 rounded-full"></span>
+                <button onclick="logout()" class="text-xs bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md transition"><i class="fa-solid fa-sign-out-alt"></i> Keluar</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 min-h-screen pb-24">
+        
+        <section id="page-login" class="max-w-md mx-auto my-12 bg-white rounded-2xl shadow-xl overflow-hidden p-8">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-running text-4xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Selamat Datang</h2>
+                <p class="text-gray-500 text-sm mt-1">Aplikasi Penilaian Digital Guru PJOK Berbasis TP</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email Guru</label>
+                    <input type="email" id="loginEmail" value="guru.pjok@sekolah.id" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Kata Sandi</label>
+                    <input type="password" id="loginPassword" value="123456" class="w-full border border-gray-300 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <button onclick="loginDenganEmail()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl transition shadow-md">
+                    <i class="fa-solid fa-sign-in-alt mr-2"></i> Masuk Sistem
+                </button>
+                <div class="relative flex py-2 items-center">
+                    <div class="flex-grow border-t border-gray-300"></div>
+                    <span class="flex-shrink mx-4 text-gray-400 text-xs uppercase">Atau</span>
+                    <div class="flex-grow border-t border-gray-300"></div>
+                </div>
+                <button onclick="loginDenganGoogle()" class="w-full bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 rounded-xl transition flex items-center justify-center space-x-2 shadow-sm">
+                    <img src="https://www.gstatic.com/images/branding/product/1x/glook_64dp.png" class="w-5 h-5" alt="Google">
+                    <span>Masuk dengan Google</span>
+                </button>
+            </div>
+        </section>
+
+        <div id="app-content" class="hidden">
+            
+            <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 rounded-r-xl no-print flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h4 class="font-semibold text-yellow-800 text-sm"><i class="fa-solid fa-key mr-1"></i> Konfigurasi Integrasi Cloud (Opsional)</h4>
+                    <p class="text-xs text-yellow-700 mt-1">Masukkan URL Web App Apps Script untuk otomatisasi simpan data ke Google Sheets & Drive.</p>
+                </div>
+                <input type="text" id="gasApiUrl" placeholder="https://script.google.com/macros/s/.../exec" class="w-full md:w-96 text-xs bg-white border border-yellow-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-yellow-500">
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm p-2 mb-6 flex space-x-1 overflow-x-auto no-print">
+                <button onclick="switchTab('dashboard')" id="btn-tab-dashboard" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap bg-emerald-600 text-white"><i class="fa-solid fa-chart-pie mr-2"></i>Dashboard</button>
+                <button onclick="switchTab('database')" id="btn-tab-database" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap text-gray-600 hover:bg-gray-100"><i class="fa-solid fa-database mr-2"></i>Setup Data</button>
+                <button onclick="switchTab('bank-tp')" id="btn-tab-bank-tp" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap text-gray-600 hover:bg-gray-100"><i class="fa-solid fa-book mr-2"></i>Bank TP</button>
+                <button onclick="switchTab('penilaian')" id="btn-tab-penilaian" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap text-gray-600 hover:bg-gray-100"><i class="fa-solid fa-clipboard-check mr-2"></i>Penilaian Lapangan</button>
+                <button onclick="switchTab('analisis')" id="btn-tab-analisis" class="flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap text-gray-600 hover:bg-gray-100"><i class="fa-solid fa-square-poll-vertical mr-2"></i>Statistik & Rekap</button>
+            </div>
+
+            <section id="tab-dashboard" class="tab-content block">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500">
+                        <span class="text-xs text-gray-400 font-medium block uppercase">Kelas Aktif</span>
+                        <span id="dash-total-kelas" class="text-2xl font-bold block text-gray-800">1</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500">
+                        <span class="text-xs text-gray-400 font-medium block uppercase">Total Siswa</span>
+                        <span id="dash-total-siswa" class="text-2xl font-bold block text-gray-800">5</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-purple-500">
+                        <span class="text-xs text-gray-400 font-medium block uppercase">Total Bank TP</span>
+                        <span id="dash-total-tp" class="text-2xl font-bold block text-gray-800">3</span>
+                    </div>
+                    <div class="bg-white p-4 rounded-xl shadow-sm border-l-4 border-amber-500">
+                        <span class="text-xs text-gray-400 font-medium block uppercase">Data Dinilai</span>
+                        <span id="dash-total-nilai" class="text-2xl font-bold block text-gray-800">0</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="font-bold text-lg mb-4 text-gray-800"><i class="fa-solid fa-calendar-day mr-2 text-emerald-600"></i>Jadwal Penilaian Hari Ini</h3>
+                        <div class="divide-y divide-gray-100">
+                            <div class="py-3 flex justify-between items-center">
+                                <div>
+                                    <span class="font-semibold text-sm block">Kelas VII-A (Fase D)</span>
+                                    <span class="text-xs text-gray-400">Materi: Kebugaran Jasmani - Circuit Training</span>
+                                </div>
+                                <button onclick="bukaPenilaianCepat('VII-A', 'TP 1')" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs font-semibold px-3 py-2 rounded-lg transition">Mulai Nilai</button>
+                            </div>
+                            <div class="py-3 flex justify-between items-center">
+                                <div>
+                                    <span class="font-semibold text-sm block">Kelas VIII-B (Fase D)</span>
+                                    <span class="text-xs text-gray-400">Materi: Permainan Bola Besar (Sepakbola)</span>
+                                </div>
+                                <button onclick="alert('Pilih kelas di tab Penilaian')" class="bg-gray-50 text-gray-400 text-xs px-3 py-2 rounded-lg cursor-not-allowed">Belum Mulai</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-lg mb-2 text-gray-800"><i class="fa-solid fa-circle-info mr-2 text-blue-500"></i>Panduan Lapangan</h3>
+                            <p class="text-xs text-gray-500 leading-relaxed">Gunakan menu <strong>Penilaian Lapangan</strong> saat memegang peluit. Tombol skor dirancang ekstra besar agar guru dapat menilai performa gerak siswa hanya dengan 1 ketukan berdurasi kurang dari 3 detik per siswa!</p>
+                        </div>
+                        <div class="mt-4 bg-emerald-50 p-3 rounded-lg text-center">
+                            <span class="text-xs font-semibold text-emerald-700 block">Sistem Aktif Terintegrasi</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-database" class="tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+                        <h3 class="font-bold text-base border-b pb-2 text-gray-800"><i class="fa-solid fa-sliders mr-2 text-emerald-600"></i>Setup Konfigurasi</h3>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Tahun Ajaran</label>
+                            <select id="setupTahun" class="w-full text-sm border rounded-lg p-2 bg-gray-50">
+                                <option>2025/2026</option>
+                                <option>2026/2027</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Semester</label>
+                            <select id="setupSemester" class="w-full text-sm border rounded-lg p-2 bg-gray-50">
+                                <option value="1">1 (Ganjil)</option>
+                                <option value="2">2 (Genap)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Fase Kurikulum</label>
+                            <select id="setupFase" class="w-full text-sm border rounded-lg p-2 bg-gray-50">
+                                <option value="A">Fase A (Kelas 1-2)</option>
+                                <option value="B">Fase B (Kelas 3-4)</option>
+                                <option value="C">Fase C (Kelas 5-6)</option>
+                                <option value="D" selected>Fase D (Kelas 7-9)</option>
+                                <option value="E">Fase E (Kelas 10)</option>
+                                <option value="F">Fase F (Kelas 11-12)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Nama Kelas Baru</label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="inputNamaKelas" placeholder="Contoh: VII-A" class="w-full text-sm border rounded-lg p-2">
+                                <button onclick="tambahKelas()" class="bg-emerald-600 text-white px-4 rounded-lg text-sm font-medium hover:bg-emerald-700">Tambah</button>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Daftar Kelas Terdaftar</label>
+                            <ul id="list-kelas" class="mt-2 space-y-1 text-sm text-gray-600">
+                                </ul>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm space-y-4">
+                        <h3 class="font-bold text-base border-b pb-2 text-gray-800"><i class="fa-solid fa-file-import mr-2 text-blue-600"></i>Import Siswa dari Excel / Spreadsheet</h3>
+                        <p class="text-xs text-gray-400">Pilih kelas target, lalu salin/paste kolom daftar nama siswa dari file Excel Anda ke kotak di bawah (Satu baris untuk satu nama).</p>
+                        
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Pilih Kelas Target</label>
+                            <select id="importTargetKelas" class="w-full text-sm border rounded-lg p-2 bg-gray-50"></select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Daftar Nama (Salin & Tempel di sini)</label>
+                            <textarea id="importNamaSiswaRaw" rows="6" placeholder="Ahmad Dhani&#10;Budi Gunawan&#10;Citra Lestari&#10;Dedi Kusnandar&#10;Eka Prasetya" class="w-full text-sm border rounded-lg p-3 font-mono focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                        <button onclick="prosesImportSiswa()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                            <i class="fa-solid fa-upload mr-2"></i>Masukkan ke Database Sistem
+                        </button>
+
+                        <div class="mt-4">
+                            <h4 class="text-xs font-bold text-gray-700 mb-2 uppercase">Pratinjau Data Siswa Aktif:</h4>
+                            <div class="overflow-x-auto max-h-48 border rounded-lg">
+                                <table class="w-full text-left text-xs divide-y">
+                                    <thead class="bg-gray-50 sticky top-0">
+                                        <tr>
+                                            <th class="p-2">NIS/No</th>
+                                            <th class="p-2">Nama Siswa</th>
+                                            <th class="p-2">Kelas</th>
+                                            <th class="p-2 text-center">Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-preview-siswa" class="divide-y bg-white">
+                                        </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-bank-tp" class="tab-content hidden space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm space-y-4">
+                        <h3 class="font-bold text-base border-b pb-2 text-gray-800"><i class="fa-solid fa-plus-circle mr-2 text-purple-600"></i>Tambah Tujuan Pembelajaran</h3>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Kode TP / Id</label>
+                            <input type="text" id="tpKode" placeholder="Contoh: TP 1" class="w-full text-sm border rounded-lg p-2">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Materi Induk / Pokok Bahasan</label>
+                            <input type="text" id="tpMateri" placeholder="Contoh: Kebugaran Jasmani" class="w-full text-sm border rounded-lg p-2">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-500 mb-1">Deskripsi Narasi TP</label>
+                            <textarea id="tpDeskripsi" rows="3" placeholder="Mempraktikkan aktivitas latihan kekuatan, kelenturan, dan daya tahan melalui circuit training dengan benar." class="w-full text-sm border rounded-lg p-2"></textarea>
+                        </div>
+                        <button onclick="simpanTP()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2.5 rounded-lg text-sm transition">
+                            <i class="fa-solid fa-save mr-2"></i>Simpan ke Bank TP
+                        </button>
+                    </div>
+
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm">
+                        <h3 class="font-bold text-base border-b pb-2 mb-4 text-gray-800"><i class="fa-solid fa-list-check mr-2 text-purple-600"></i>Pemetaan Bank TP Aktif</h3>
+                        <div class="space-y-3 max-h-[400px] overflow-y-auto pr-2" id="list-bank-tp">
+                            </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-penilaian" class="tab-content hidden">
+                <div class="bg-white p-4 rounded-xl shadow-sm mb-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">1. Pilih Kelas Lapangan</label>
+                        <select id="penilaianKelas" onchange="updateDropdownTP()" class="w-full text-sm border rounded-lg p-2.5 bg-gray-50 font-semibold"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">2. Target Tujuan Pembelajaran (TP)</label>
+                        <select id="penilaianTP" class="w-full text-sm border rounded-lg p-2.5 bg-gray-50"></select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-500 mb-1">3. Jenis Asesmen</label>
+                        <select id="penilaianJenis" class="w-full text-sm border rounded-lg p-2.5 bg-gray-50 font-medium">
+                            <optgroup label="FORMATIF">
+                                <option value="Form-Observasi">Checklist Observasi Lapangan</option>
+                                <option value="Form-Catatan">Catatan Anekdot Performa</option>
+                                <option value="Form-Refleksi">Refleksi Mandiri Siswa</option>
+                            </optgroup>
+                            <optgroup label="SUMATIF">
+                                <option value="Sum-Praktik" selected>Rubrik Praktik Cabang Olahraga</option>
+                                <option value="Sum-Circuit">Sirkuit Training (Circuit Training)</option>
+                                <option value="Sum-Kebugaran">Tes Kebugaran Jasmani Indonesia</option>
+                                <option value="Sum-Portofolio">Unjuk Kerja & Portofolio</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <button onclick="bukaSesiPenilaian()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-md transition">
+                        <i class="fa-solid fa-bolt mr-2"></i>Aktifkan Mode Lapangan
+                    </button>
+                </div>
+
+                <div id="box-fast-assessment" class="hidden grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 text-white p-6 rounded-2xl shadow-xl flex flex-col justify-between min-h-[380px]">
+                        <div class="flex justify-between items-center border-b border-slate-700 pb-3">
+                            <span class="text-xs bg-emerald-500 px-3 py-1 rounded-full text-white font-bold uppercase tracking-wider" id="lbl-current-jenis">SUMATIF</span>
+                            <div class="text-sm font-mono text-gray-400">
+                                Antrean Siswa: <span id="lbl-index-siswa" class="text-yellow-400 font-bold">1</span>/<span id="lbl-total-siswa">5</span>
+                            </div>
+                        </div>
+
+                        <div class="my-6 text-center">
+                            <h2 id="lbl-nama-siswa" class="text-3xl font-bold text-yellow-300 tracking-wide drop-shadow">NAMA SISWA LAPANGAN</h2>
+                            <p id="lbl-info-tp" class="text-xs text-gray-300 mt-2 max-w-xl mx-auto italic">"Target Kompetensi Pembelajaran PJOK..."</p>
+                        </div>
+
+                        <div>
+                            <span class="block text-center text-xs font-semibold text-gray-400 mb-3 tracking-widest uppercase">Ketuk Skor Kontekstual Performa Gerak</span>
+                            <div class="grid grid-cols-4 gap-3">
+                                <button onclick="submitSkorCepat(1)" class="score-btn bg-red-600 hover:bg-red-500 py-5 rounded-xl font-bold text-2xl shadow-lg border border-red-700">1<span class="block text-xs font-normal opacity-70 mt-1">Perlu Bim.</span></button>
+                                <button onclick="submitSkorCepat(2)" class="score-btn bg-amber-500 hover:bg-amber-400 py-5 rounded-xl font-bold text-2xl shadow-lg border border-amber-600">2<span class="block text-xs font-normal opacity-70 mt-1">Cukup</span></button>
+                                <button onclick="submitSkorCepat(3)" class="score-btn bg-blue-600 hover:bg-blue-500 py-5 rounded-xl font-bold text-2xl shadow-lg border border-blue-700">3<span class="block text-xs font-normal opacity-70 mt-1">Baik</span></button>
+                                <button onclick="submitSkorCepat(4)" class="score-btn bg-emerald-600 hover:bg-emerald-500 py-5 rounded-xl font-bold text-2xl shadow-lg border border-emerald-700">4<span class="block text-xs font-normal opacity-70 mt-1">Sangat Baik</span></button>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-700 flex justify-between items-center">
+                            <button onclick="navigasiSiswa(-1)" class="text-xs text-gray-400 hover:text-white"><i class="fa-solid fa-arrow-left mr-1"></i> Lewati Mundur</button>
+                            <button onclick="bukaModalDokumentasi()" class="bg-slate-700 hover:bg-slate-600 text-xs text-gray-200 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-camera mr-1 text-sky-400"></i> Catatan/Foto</button>
+                            <button onclick="navigasiSiswa(1)" class="text-xs text-gray-400 hover:text-white">Lewati Maju <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl shadow-sm border flex flex-col justify-between">
+                        <div>
+                            <h3 class="font-bold text-sm text-gray-700 mb-3 border-b pb-1"><i class="fa-solid fa-feather-alt mr-1 text-amber-500"></i>Dokumentasi & Catatan Kasus</h3>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-400 mb-1">Catatan Anekdot / Kendala Fisik Siswa</label>
+                                    <input type="text" id="field-catatan" placeholder="Contoh: salah tumpuan kaki kiri / kelelahan" class="w-full text-xs border rounded-lg p-2 focus:ring-1 focus:ring-emerald-500">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-400 mb-1">Unggah Link Foto Aksi Lapangan</label>
+                                    <input type="text" id="field-foto-url" placeholder="Paste url gambar / otomatis cloud" class="w-full text-xs border rounded-lg p-2 font-mono">
+                                    <p class="text-[10px] text-gray-400 mt-1">Jika terintegrasi dengan Google Drive, foto lapangan terupload otomatis ke folder terstruktur.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 bg-gray-50 p-3 rounded-xl">
+                            <h4 class="text-xs font-bold text-gray-600 mb-2">Riwayat Skor Instan Sesi Ini:</h4>
+                            <div class="max-h-28 overflow-y-auto text-xs space-y-1" id="list-riwayat-instan">
+                                </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-analisis" class="tab-content hidden space-y-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm no-print flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div>
+                        <h3 class="font-bold text-base text-gray-800">Otomatisasi Hitung & Kompilasi Laporan</h3>
+                        <p class="text-xs text-gray-400">Analisis statistik deskriptif menyeluruh dari rekam jejak penilaian lapangan.</p>
+                    </div>
+                    <div class="flex space-x-2">
+                        <button onclick="renderAnalisisDanStatistik()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition">
+                            <i class="fa-solid fa-sync mr-1"></i> Jalankan Kalkulasi Analisis
+                        </button>
+                        <button onclick="window.print()" class="bg-gray-700 hover:bg-gray-800 text-white text-xs font-bold px-4 py-2.5 rounded-lg transition">
+                            <i class="fa-solid fa-print mr-1"></i> Cetak / Save PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm space-y-4 print-card">
+                        <h4 class="font-bold text-sm text-gray-700 border-b pb-2 uppercase tracking-wide"><i class="fa-solid fa-calculator mr-2 text-blue-600"></i>Statistik Deskriptif Kelas</h4>
+                        
+                        <div class="grid grid-cols-2 gap-3 text-center">
+                            <div class="bg-gray-50 p-2.5 rounded-lg">
+                                <span class="text-[10px] text-gray-400 font-bold block uppercase">Rata-rata (Mean)</span>
+                                <span id="stat-mean" class="text-xl font-bold text-gray-800">-</span>
+                            </div>
+                            <div class="bg-gray-50 p-2.5 rounded-lg">
+                                <span class="text-[10px] text-gray-400 font-bold block uppercase">Median</span>
+                                <span id="stat-median" class="text-xl font-bold text-gray-800">-</span>
+                            </div>
+                            <div class="bg-gray-50 p-2.5 rounded-lg">
+                                <span class="text-[10px] text-gray-400 font-bold block uppercase">Modus</span>
+                                <span id="stat-modus" class="text-xl font-bold text-gray-800">-</span>
+                            </div>
+                            <div class="bg-gray-50 p-2.5 rounded-lg">
+                                <span class="text-[10px] text-gray-400 font-bold block uppercase">Std Deviasi</span>
+                                <span id="stat-stddev" class="text-xl font-bold text-gray-800">-</span>
+                            </div>
+                        </div>
+
+                        <div class="border-t pt-3 space-y-2 text-xs">
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Nilai Tertinggi / Terendah:</span>
+                                <span class="font-bold text-gray-800"><span id="stat-max">-</span> / <span id="stat-min">-</span></span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Tuntas Ketercapaian TP:</span>
+                                <span class="font-bold text-emerald-600" id="stat-tuntas">- Siswa</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-gray-500">Butuh Remedial/Penguatan:</span>
+                                <span class="font-bold text-red-600" id="stat-remedial">- Siswa</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-2 border-t">
+                                <span class="text-gray-500 font-bold">Persentase Ketuntasan:</span>
+                                <span class="text-sm font-extrabold text-blue-600" id="stat-persen">- %</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="md:col-span-2 bg-white p-6 rounded-xl shadow-sm print-card flex flex-col justify-between">
+                        <h4 class="font-bold text-sm text-gray-700 border-b pb-2 mb-2 uppercase tracking-wide"><i class="fa-solid fa-chart-bar mr-2 text-emerald-600"></i>Grafik Distribusi Capaian Indikator</h4>
+                        <div class="w-full h-48 flex items-center justify-center">
+                            <canvas id="chartAnalisis"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-xl shadow-sm print-card">
+                    <h4 class="font-bold text-sm text-gray-700 border-b pb-3 mb-4 uppercase tracking-wide"><i class="fa-solid fa-file-invoice mr-2 text-purple-600"></i>Rekapitulasi Nilai & Deskripsi Narasi Otomatis</h4>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs divide-y border">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="p-3 font-bold text-gray-600">Siswa</th>
+                                    <th class="p-3 font-bold text-gray-600 text-center">Kelas</th>
+                                    <th class="p-3 font-bold text-gray-600 text-center">Kode TP</th>
+                                    <th class="p-3 font-bold text-gray-600 text-center">Skor Akhir (1-4)</th>
+                                    <th class="p-3 font-bold text-gray-600 text-center">Status TP</th>
+                                    <th class="p-3 font-bold text-gray-600">Deskripsi Capaian Otomatis (Rapor)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-rekap-final" class="divide-y bg-white">
+                                <tr>
+                                    <td colspan="6" class="p-4 text-center text-gray-400 italic">Belum ada kalkulasi data. Klik tombol 'Jalankan Kalkulasi Analisis' di atas.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <script>
+        // ================= APPLICATION STATE DATA (MOCKUP DATABASE) =================
+        let dbSiswa = [
+            { id: 1, nama: "Ahmad Dhani", kelas: "VII-A" },
+            { id: 2, nama: "Budi Gunawan", kelas: "VII-A" },
+            { id: 3, nama: "Citra Lestari", kelas: "VII-A" },
+            { id: 4, nama: "Dedi Kusnandar", kelas: "VII-A" },
+            { id: 5, nama: "Eka Prasetya", kelas: "VII-A" }
+        ];
+
+        let dbKelas = ["VII-A"];
+
+        let dbTP = [
+            { kode: "TP 1", materi: "Kebugaran Jasmani", deskripsi: "Mempraktikkan aktivitas latihan kekuatan dan daya tahan melalui circuit training dengan benar." },
+            { kode: "TP 2", materi: "Sepakbola", deskripsi: "Mempraktikkan variasi pola gerak spesifik menendang dan menahan bola permainan sepakbola." },
+            { kode: "TP 3", materi: "Senam Lantai", deskripsi: "Menganalisis dan mempraktikkan keterampilan gerak spesifik guling depan (forward roll)." }
+        ];
+
+        let dbPenilaian = []; // Menyimpan log nilai lapangan
+
+        // State Penilaian Lapangan Berjalan
+        let currentSesiSiswa = [];
+        let currentSesiIndex = 0;
+        let myChartInstance = null;
+
+        // ================= RUNNING ENGINE AWAL SYSTEM =================
+        window.onload = function() {
+            inisialisasiDropdowns();
+            renderDaftarKelas();
+            renderPreviewSiswa();
+            renderBankTP();
+            hitungKalkulasiDashboardAwal();
+        };
+
+        // ================= AUTHENTICATION MANAGEMENT =================
+        function loginDenganEmail() {
+            let email = document.getElementById('loginEmail').value;
+            if(email) {
+                prosesSuksesLogin(email);
+            }
+        }
+
+        function loginDenganGoogle() {
+            prosesSuksesLogin("guru.pjok.berbagi@gmail.com");
+        }
+
+        function prosesSuksesLogin(email) {
+            document.getElementById('page-login').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('userInfo').classList.remove('hidden');
+            document.getElementById('userEmail').innerText = email;
+        }
+
+        function logout() {
+            document.getElementById('page-login').classList.remove('hidden');
+            document.getElementById('app-content').classList.add('hidden');
+            document.getElementById('userInfo').classList.add('hidden');
+        }
+
+        // ================= NAVIGATION MANAGER =================
+        function switchTab(tabId) {
+            // Sembunyikan semua tab content
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            // Tampilkan tab terpilih
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+            // Reset style tombol navigasi
+            document.querySelectorAll('[id^="btn-tab-"]').forEach(btn => {
+                btn.className = "flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap text-gray-600 hover:bg-gray-100";
+            });
+            // Beri warna aktif pada tab bersangkutan
+            document.getElementById('btn-tab-' + tabId).className = "flex-1 py-2.5 px-4 rounded-lg text-sm font-medium transition whitespace-nowrap bg-emerald-600 text-white";
+        }
+
+        // ================= DATABASE CONTROLLER (SETUP) =================
+        function inisialisasiDropdowns() {
+            let selectTarget = document.getElementById('importTargetKelas');
+            let selectPenKelas = document.getElementById('penilaianKelas');
+            
+            selectTarget.innerHTML = "";
+            selectPenKelas.innerHTML = "";
+
+            dbKelas.forEach(k => {
+                selectTarget.innerHTML += `<option value="${k}">${k}</option>`;
+                selectPenKelas.innerHTML += `<option value="${k}">${k}</option>`;
+            });
+            updateDropdownTP();
+        }
+
+        function updateDropdownTP() {
+            let selectPenTP = document.getElementById('penilaianTP');
+            selectPenTP.innerHTML = "";
+            dbTP.forEach(tp => {
+                selectPenTP.innerHTML += `<option value="${tp.kode}">${tp.kode} - ${tp.materi}</option>`;
+            });
+        }
+
+        function tambahKelas() {
+            let namaVal = document.getElementById('inputNamaKelas').value.trim();
+            if(namaVal && !dbKelas.includes(namaVal)) {
+                dbKelas.push(namaVal);
+                document.getElementById('inputNamaKelas').value = "";
+                renderDaftarKelas();
+                inisialisasiDropdowns();
+            }
+        }
+
+        function renderDaftarKelas() {
+            let container = document.getElementById('list-kelas');
+            container.innerHTML = "";
+            dbKelas.forEach(k => {
+                container.innerHTML += `<li class="flex items-center space-x-2"><i class="fa-solid fa-check text-emerald-500 text-xs"></i> <span>Kelas ${k}</span></li>`;
+            });
+        }
+
+        function prosesImportSiswa() {
+            let kelasTarget = document.getElementById('importTargetKelas').value;
+            let rawNama = document.getElementById('importNamaSiswaRaw').value.split('\n');
+            
+            let countImport = 0;
+            rawNama.forEach(line => {
+                let namaClean = line.trim();
+                if(namaClean.length > 0) {
+                    let nextId = dbSiswa.length + 1;
+                    dbSiswa.push({ id: nextId, nama: namaClean, kelas: kelasTarget });
+                    countImport++;
+                }
+            });
+
+            if(countImport > 0) {
+                alert(`Berhasil mengimpor ${countImport} siswa ke kelas ${kelasTarget}`);
+                document.getElementById('importNamaSiswaRaw').value = "";
+                renderPreviewSiswa();
+                hitungKalkulasiDashboardAwal();
+            }
+        }
+
+        function renderPreviewSiswa() {
+            let tbody = document.getElementById('table-preview-siswa');
+            tbody.innerHTML = "";
+            dbSiswa.forEach((s, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2 font-mono text-gray-400">${idx+1}</td>
+                        <td class="p-2 font-medium">${s.nama}</td>
+                        <td class="p-2"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-[10px] font-bold">${s.kelas}</span></td>
+                        <td class="p-2 text-center">
+                            <button onclick="hapusSiswa(${s.id})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash-can"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function hapusSiswa(id) {
+            dbSiswa = dbSiswa.filter(s => s.id !== id);
+            renderPreviewSiswa();
+            hitungKalkulasiDashboardAwal();
+        }
+
+        // ================= BANK TP CONTROLLER =================
+        function simpanTP() {
+            let kode = document.getElementById('tpKode').value.trim();
+            let materi = document.getElementById('tpMateri').value.trim();
+            let deskripsi = document.getElementById('tpDeskripsi').value.trim();
+
+            if(kode && materi && deskripsi) {
+                dbTP.push({ kode, materi, deskripsi });
+                // Reset Form
+                document.getElementById('tpKode').value = "";
+                document.getElementById('tpMateri').value = "";
+                document.getElementById('tpDeskripsi').value = "";
+                
+                renderBankTP();
+                updateDropdownTP();
+                hitungKalkulasiDashboardAwal();
+                alert('Tujuan Pembelajaran berhasil ditambahkan ke Bank TP.');
+            }
+        }
+
+        function renderBankTP() {
+            let container = document.getElementById('list-bank-tp');
+            container.innerHTML = "";
+            dbTP.forEach(tp => {
+                container.innerHTML += `
+                    <div class="p-3 bg-gray-50 rounded-xl border border-gray-200 relative group">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded font-bold">${tp.kode}</span>
+                            <span class="text-xs font-semibold text-gray-700">${tp.materi}</span>
+                        </div>
+                        <p class="text-xs text-gray-500 leading-relaxed">${tp.deskripsi}</p>
+                    </div>
+                `;
+            });
+        }
+
+        // ================= FIELD ASSESSMENT CONTROLLER (INPUT LAPANGAN < 3 DETIK) =================
+        function bukaPenilaianCepat(targetKelas, targetTP) {
+            switchTab('penilaian');
+            document.getElementById('penilaianKelas').value = targetKelas;
+            document.getElementById('penilaianTP').value = targetTP;
+            bukaSesiPenilaian();
+        }
+
+        function bukaSesiPenilaian() {
+            let kelas = document.getElementById('penilaianKelas').value;
+            let tpKode = document.getElementById('penilaianTP').value;
+            let jenis = document.getElementById('penilaianJenis').value;
+
+            // Filter siswa berdasarkan kelas terpilih
+            currentSesiSiswa = dbSiswa.filter(s => s.kelas === kelas);
+
+            if(currentSesiSiswa.length === 0) {
+                alert("Tidak ada siswa terdaftar di kelas " + kelas + ". Silakan tambahkan data siswa di menu Setup Data.");
+                return;
+            }
+
+            currentSesiIndex = 0;
+            document.getElementById('box-fast-assessment').classList.remove('hidden');
+            
+            // Atur Label Info Sesi
+            document.getElementById('lbl-current-jenis').innerText = jenis.replace('-', ' - ');
+            document.getElementById('lbl-total-siswa').innerText = currentSesiSiswa.length;
+            
+            tampilkanSiswaAktifFokus();
+            updateRiwayatInstanSesi();
+        }
+
+        function tampilkanSiswaAktifFokus() {
+            if(currentSesiSiswa.length === 0) return;
+            
+            let siswa = currentSesiSiswa[currentSesiIndex];
+            let tpKode = document.getElementById('penilaianTP').value;
+            
+            // Cari deskripsi TP
+            let objTP = dbTP.find(t => t.kode === tpKode);
+            let txtDeskripsi = objTP ? objTP.deskripsi : "Target Kompetensi Pembelajaran PJOK";
+
+            document.getElementById('lbl-index-siswa').innerText = currentSesiIndex + 1;
+            document.getElementById('lbl-nama-siswa').innerText = siswa.nama.toUpperCase();
+            document.getElementById('lbl-info-tp').innerText = `"${txtDeskripsi}"`;
+
+            // Reset Field Opsional pendukung
+            document.getElementById('field-catatan').value = "";
+            document.getElementById('field-foto-url').value = "";
+
+            // Cari jika sebelumnya sudah pernah diinput di sesi ini biar muncul kembali
+            let jenis = document.getElementById('penilaianJenis').value;
+            let existing = dbPenilaian.find(p => p.siswaId === siswa.id && p.tpKode === tpKode && p.jenis === jenis);
+            if(existing) {
+                document.getElementById('field-catatan').value = existing.catatan;
+                document.getElementById('field-foto-url').value = existing.fotoUrl;
+            }
+        }
+
+        function submitSkorCepat(skor) {
+            let siswa = currentSesiSiswa[currentSesiIndex];
+            let tpKode = document.getElementById('penilaianTP').value;
+            let jenis = document.getElementById('penilaianJenis').value;
+            let catatan = document.getElementById('field-catatan').value.trim();
+            let fotoUrl = document.getElementById('field-foto-url').value.trim();
+            
+            // Cek duplikasi, jika ada maka update skor, jika tidak ada maka push baru
+            let recordIdx = dbPenilaian.findIndex(p => p.siswaId === siswa.id && p.tpKode === tpKode && p.jenis === jenis);
+            
+            let dataRecord = {
+                siswaId: siswa.id,
+                nama: siswa.nama,
+                kelas: siswa.kelas,
+                tpKode: tpKode,
+                jenis: jenis,
+                skor: skor,
+                catatan: catatan,
+                fotoUrl: fotoUrl,
+                timestamp: new Date().toLocaleString('id-ID')
+            };
+
+            if(recordIdx > -1) {
+                dbPenilaian[recordIdx] = dataRecord;
+            } else {
+                dbPenilaian.push(dataRecord);
+            }
+
+            // POST KE GOOGLE APPS SCRIPT API SECARA ASYNC (Jika URL terisi)
+            kirimDataKeCloudSpreadsheet(dataRecord);
+
+            updateRiwayatInstanSesi();
+            hitungKalkulasiDashboardAwal();
+
+            // Pindah Otomatis ke Siswa Berikutnya secara instan (< 3 Detik Terpenuhi)
+            if(currentSesiIndex < currentSesiSiswa.length - 1) {
+                currentSesiIndex++;
+                tampilkanSiswaAktifFokus();
+            } else {
+                alert("Sesi lapangan selesai! Seluruh siswa dalam antrean kelas ini telah berhasil dinilai.");
+            }
+        }
+
+        function navigasiSiswa(arah) {
+            let targetIdx = currentSesiIndex + arah;
+            if(targetIdx >= 0 && targetIdx < currentSesiSiswa.length) {
+                currentSesiIndex = targetIdx;
+                tampilkanSiswaAktifFokus();
+            }
+        }
+
+        function updateRiwayatInstanSesi() {
+            let container = document.getElementById('list-riwayat-instan');
+            container.innerHTML = "";
+            
+            let tpKode = document.getElementById('penilaianTP').value;
+            let jenis = document.getElementById('penilaianJenis').value;
+
+            let filterSesi = dbPenilaian.filter(p => p.tpKode === tpKode && p.jenis === jenis);
+            
+            if(filterSesi.length === 0) {
+                container.innerHTML = "<span class='text-gray-400 italic block py-1'>Belum ada input skor masuk.</span>";
+                return;
+            }
+
+            filterSesi.slice(-4).reverse().forEach(r => {
+                let badgeColor = r.skor >= 3 ? 'bg-emerald-500' : (r.skor == 2 ? 'bg-amber-500' : 'bg-red-500');
+                container.innerHTML += `
+                    <div class="flex justify-between items-center bg-gray-100 p-1 rounded px-2">
+                        <span class="truncate max-w-[150px] font-medium">${r.nama}</span>
+                        <span class="${badgeColor} text-white px-1.5 py-0.2 rounded font-bold text-[10px]">Skor ${r.skor}</span>
+                    </div>
+                `;
+            });
+        }
+
+        // ================= ANALISIS & STATISTIK STATISTIK DESKRIPTIF ENGINE =================
+        function renderAnalisisDanStatistik() {
+            if(dbPenilaian.length === 0) {
+                alert("Tidak ada data nilai di database lapangan. Silakan lakukan penilaian lapangan terlebih dahulu.");
+                return;
+            }
+
+            // Ambil seluruh array skor untuk perhitungan matematika statistik
+            let listSkor = dbPenilaian.map(p => p.skor);
+            let N = listSkor.length;
+
+            // 1. Mean (Rata-rata)
+            let sum = listSkor.reduce((a, b) => a + b, 0);
+            let mean = sum / N;
+
+            // 2. Median
+            let sorted = [...listSkor].sort((a, b) => a - b);
+            let median = sorted[Math.floor(N / 2)];
+            if (N % 2 === 0) {
+                median = (sorted[N / 2 - 1] + sorted[N / 2]) / 2;
+            }
+
+            // 3. Modus
+            let counts = {};
+            let maxCount = 0;
+            let modus = sorted[0];
+            sorted.forEach(val => {
+                counts[val] = (counts[val] || 0) + 1;
+                if(counts[val] > maxCount) {
+                    maxCount = counts[val];
+                    modus = val;
+                }
+            });
+
+            // 4. Standar Deviasi
+            let squareDiffs = listSkor.map(value => {
+                let diff = value - mean;
+                return diff * diff;
+            });
+            let avgSquareDiff = squareDiffs.reduce((a, b) => a + b, 0) / N;
+            let stdDev = Math.sqrt(avgSquareDiff);
+
+            // 5. Hitung Ketuntasan Kriteria Capaian (Skor >= 3 Dianggap Tuntas/Tercapai Kompetensi)
+            let tuntasSiswa = dbPenilaian.filter(p => p.skor >= 3).length;
+            let remedialSiswa = N - tuntasSiswa;
+            let persentaseKetuntasan = (tuntasSiswa / N) * 100;
+
+            // Tampilkan ke UI DOM Element
+            document.getElementById('stat-mean').innerText = mean.toFixed(2);
+            document.getElementById('stat-median').innerText = median;
+            document.getElementById('stat-modus').innerText = modus;
+            document.getElementById('stat-stddev').innerText = stdDev.toFixed(2);
+            document.getElementById('stat-max').innerText = Math.max(...listSkor);
+            document.getElementById('stat-min').innerText = Math.min(...listSkor);
+            document.getElementById('stat-tuntas').innerText = `${tuntasSiswa} Siswa`;
+            document.getElementById('stat-remedial').innerText = `${remedialSiswa} Siswa`;
+            document.getElementById('stat-persen').innerText = `${persentaseKetuntasan.toFixed(1)} %`;
+
+            // RENDER GRAFIK DISTRIBUSI (CHART.JS)
+            renderChartDistribusi(counts);
+
+            // GENERATE TABEL REKAP & DESKRIPSI NARASI OTOMATIS RAPOR
+            renderTabelRekapFinal();
+        }
+
+        function renderChartDistribusi(countsObj) {
+            let ctx = document.getElementById('chartAnalisis').getContext('2d');
+            
+            let dataSkor = [countsObj[1] || 0, countsObj[2] || 0, countsObj[3] || 0, countsObj[4] || 0];
+
+            if(myChartInstance) {
+                myChartInstance.destroy(); // Hancurkan instance lama agar tidak bentrok render
+            }
+
+            myChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Skor 1 (Perlu Bimbingan)', 'Skor 2 (Cukup)', 'Skor 3 (Baik)', 'Skor 4 (Sangat Baik)'],
+                    datasets: [{
+                        label: 'Jumlah Frekuensi Distribusi Performa Siswa',
+                        data: dataSkor,
+                        backgroundColor: ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
+            });
+        }
+
+        function renderTabelRekapFinal() {
+            let tbody = document.getElementById('table-rekap-final');
+            tbody.innerHTML = "";
+
+            dbPenilaian.forEach(item => {
+                // Ambil deskripsi asli TP dari Bank Data
+                let targetTP = dbTP.find(t => t.kode === item.tpKode);
+                let narasiMateri = targetTP ? targetTP.materi : "materi pokok";
+                
+                // GENERATOR DESKRIPSI OTOMATIS BERDASARKAN SKOR KOMPETENSI
+                let deskripsiNarasi = "";
+                let statusCapaian = "";
+                let statusClass = "";
+
+                if(item.skor === 4) {
+                    statusCapaian = "Tercapai (Sangat Baik)";
+                    statusClass = "text-emerald-600 font-bold";
+                    deskripsiNarasi = `Menunjukkan penguasaan yang sangat baik dalam ${targetTP ? targetTP.deskripsi : 'kompetensi pembelajaran'}. Siswa sangat mahir dan konsisten dalam mempraktikkan materi gerak ini di lapangan.`;
+                } else if(item.skor === 3) {
+                    statusCapaian = "Tercapai (Baik)";
+                    statusClass = "text-blue-600 font-bold";
+                    deskripsiNarasi = `Menunjukkan penguasaan kompetensi yang baik dalam ${targetTP ? targetTP.deskripsi : 'kompetensi pembelajaran'}. Secara umum gerakan biomekanika olahraga sudah stabil.`;
+                } else if(item.skor === 2) {
+                    statusCapaian = "Penguatan / Remedial";
+                    statusClass = "text-amber-600 font-bold";
+                    deskripsiNarasi = `Mulai menunjukkan penguasaan namun masih cukup terbatas dalam ${targetTP ? targetTP.deskripsi : 'kompetensi'}. Perlu penguatan mandiri atau bimbingan berkala pada teknik dasar ${narasiMateri}.`;
+                } else {
+                    statusCapaian = "Butuh Remedial Khusus";
+                    statusClass = "text-red-600 font-bold";
+                    deskripsiNarasi = `Belum mampu menunjukkan kompetensi minimum dalam ${targetTP ? targetTP.deskripsi : 'kompetensi'}. Sangat membutuhkan intervensi bimbingan guru dan remedial khusus sebelum berpindah materi.`;
+                }
+
+                // Append baris rekap tabel
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="p-3 font-semibold text-gray-800">${item.nama}</td>
+                        <td class="p-3 text-center text-gray-500">${item.kelas}</td>
+                        <td class="p-3 text-center"><span class="bg-purple-100 text-purple-700 font-mono font-bold px-2 py-0.5 rounded">${item.tpKode}</span></td>
+                        <td class="p-3 text-center font-extrabold text-sm text-gray-800">${item.skor}</td>
+                        <td class="p-3 text-center ${statusClass}">${statusCapaian}</td>
+                        <td class="p-3 text-gray-600 leading-relaxed max-w-sm">${deskripsiNarasi} <span class="block text-[10px] text-gray-400 mt-1 italic">Catatan lapangan: ${item.catatan || '-'}</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function hitungKalkulasiDashboardAwal() {
+            document.getElementById('dash-total-kelas').innerText = dbKelas.length;
+            document.getElementById('dash-total-siswa').innerText = dbSiswa.length;
+            document.getElementById('dash-total-tp').innerText = dbTP.length;
+            document.getElementById('dash-total-nilai').innerText = dbPenilaian.length;
+        }
+
+        // ================= INTEGRASI API CLOUD (GOOGLE APPS SCRIPT) =================
+        function kirimDataKeCloudSpreadsheet(payload) {
+            let apiUrl = document.getElementById('gasApiUrl').value.trim();
+            if(!apiUrl) return; // Lewati jika guru memilih menggunakan database lokal browser
+
+            // Melakukan HTTP POST request secara background menggunakan Fetch API Cross-Origin
+            fetch(apiUrl, {
+                method: 'POST',
+                mode: 'no-cors', // Menghindari kendala CORS kebijakan keamanan browser
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(() => console.log("Berhasil sinkronisasi baris data ke Google Cloud Spreadsheet & Drive Folder."))
+            .catch(err => console.error("Koneksi gagal terhubung ke API Apps Script: ", err));
+        }
+    </script>
+</body>
+</html>
