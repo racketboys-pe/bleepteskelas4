@@ -168,7 +168,7 @@
                 <div class="space-y-4">
                     <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-xs text-indigo-900 leading-relaxed">
                         <p class="font-bold mb-1"><i class="fa-solid fa-circle-info"></i> Penyimpanan Tersentralisasi:</p>
-                        Sistem ini terintegrasi langsung dengan database Google Sheets melalui Google Apps Script yang telah di-hardcode di dalam kode aplikasi. Data siswa, level, shuttle, kategori kebugaran, dan nilai rapor Anda akan disimpan secara aman di cloud Anda sendiri.
+                        Sistem ini terintegrasi langsung dengan database Google Sheets melalui Google Apps Script yang telah dikonfigurasi di dalam kode aplikasi. Data siswa, level, shuttle, kategori kebugaran, dan nilai rapor Anda akan disimpan secara aman di cloud Anda sendiri.
                     </div>
 
                     <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs">
@@ -467,7 +467,7 @@
     <script>
         // =========================================================================
         // SILAKAN TEMPEL URL WEB APP GOOGLE APPS SCRIPT ANDA DI SINI:
-        const DATABASE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxzmrcvWB5zPwXq-UG02Hs9ie2mLkpEEws-gVENcGrYnShs1WjL1qUOM7Y_Y6cVXD8J0w/exec"; 
+        const DATABASE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzbTWomhx9vwV91EP2t0oGggtO1GhmLyBMutgEdO5BcLjtm6ynWGqVjh7AAbnZDef4I/exec"; 
         // =========================================================================
 
         // Bleep test level specifications (Speed in km/h and Shuttles per level)
@@ -512,8 +512,33 @@
         let bleepTimer = null;
         let bleepIntervalDuration = 0;
 
+        function updateConnectionUI(isConnected, text) {
+            const dot = document.getElementById('db-status-dot');
+            const statusText = document.getElementById('db-status-text');
+            const badge = document.getElementById('db-status-badge');
+            
+            const btnPull = document.getElementById('btn-pull-db');
+            const btnPush = document.getElementById('btn-push-db');
+
+            if (!dot || !statusText || !badge) return;
+
+            if (isConnected) {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
+                badge.className = "bg-emerald-950/60 border border-emerald-500 text-emerald-300 text-[10px] px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all";
+                statusText.innerText = text;
+                if (btnPull) btnPull.removeAttribute('disabled');
+                if (btnPush) btnPush.removeAttribute('disabled');
+            } else {
+                dot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
+                badge.className = "bg-slate-900/60 border border-slate-700 text-slate-300 text-[10px] px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all";
+                statusText.innerText = text;
+                if (btnPull) btnPull.setAttribute('disabled', 'true');
+                if (btnPush) btnPush.setAttribute('disabled', 'true');
+            }
+        }
+
         window.onload = function() {
-            // Run silent test connection on load if URL is customized
+            // Jalankan pengujian sambungan di awal
             if (DATABASE_SCRIPT_URL && !DATABASE_SCRIPT_URL.includes("_TEMPEL_URL_ANDA_DI_SINI")) {
                 testDatabaseConnection(true);
             }
@@ -538,10 +563,11 @@
             updateAllDashboards();
         };
 
-        // Initialize drag & drop for Excel files
         function initExcelUploadListeners() {
             const dropZone = document.getElementById('excel-drop-zone');
             const fileInput = document.getElementById('excel-file-input');
+
+            if (!dropZone || !fileInput) return;
 
             fileInput.addEventListener('change', handleExcelFileSelect);
 
@@ -569,7 +595,6 @@
             }, false);
         }
 
-        // Process Excel file selection using SheetJS (xlsx)
         function handleExcelFileSelect(e) {
             const files = e.target.files;
             if (files.length) {
@@ -609,7 +634,7 @@
                             gender = 'P';
                         }
 
-                        let rawClass = String(row[classKey] || '4').trim().toUpperCase(); // standardize class strings
+                        let rawClass = String(row[classKey] || '4').trim().toUpperCase();
 
                         return {
                             id: 'ID-' + (Date.now() + i + Math.floor(Math.random() * 1000)),
@@ -630,7 +655,6 @@
                     studentsList = importedStudents;
                     localStorage.setItem('sd4_bliptest_students', JSON.stringify(studentsList));
 
-                    // Default to 'all' or first class found
                     activeScoringClass = 'all';
                     activeRekapClass = 'all';
 
@@ -650,8 +674,22 @@
             reader.readAsBinaryString(file);
         }
 
-        // Generate template Excel (CSV)
-        // Populate dynamic class filters based on loaded list (Upgraded to tactile Tab Row UI)
+        function downloadCSVTemplate() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Nama Siswa,Jenis Kelamin (L/P),Kelas\r\n";
+            csvContent += "Ahmad Fauzi,L,4A\r\nSiti Rahmawati,P,4A\r\nBudi Santoso,L,4B\r\nDewi Lestari,P,4B\r\n";
+            
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "template_impor_bliptest.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alertMessage("Unduhan Berhasil", "Gunakan template ini untuk mengisi data siswa.", "info");
+        }
+
         function populateClassFilterDropdowns() {
             const classes = [...new Set(studentsList.map(s => s.class || '4'))].sort();
             
@@ -695,7 +733,6 @@
             rekapTabsContainer.innerHTML = rekapHtml;
         }
 
-        // Setters for class separation
         function setActiveScoringClass(className) {
             activeScoringClass = className;
             populateClassFilterDropdowns();
@@ -708,7 +745,6 @@
             renderStudentsResults();
         }
 
-        // Switch View Tabs Navigation System
         function switchTab(tabName) {
             const tabs = ['dashboard', 'setup', 'scoring', 'simulasi', 'rekap'];
             tabs.forEach(t => {
@@ -733,7 +769,6 @@
             }
         }
 
-        // Custom Confirmation dialog module to replace alerts/confirms
         function openConfirmModal(title, message, isWarning = true) {
             document.getElementById('confirm-title').innerText = title;
             document.getElementById('confirm-message').innerText = message;
@@ -775,7 +810,6 @@
             closeConfirmModal(true);
         });
 
-        // Web Audio API Synthesizer (Enhanced loud and sharp whistle)
         function getAudioContext() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -806,7 +840,7 @@
                 filter.Q.setValueAtTime(1.5, ctx.currentTime);
 
                 primaryGain.gain.setValueAtTime(0.5, ctx.currentTime);
-                masterGain.gain.setValueAtTime(0.65, ctx.currentTime); // Sound amplification
+                masterGain.gain.setValueAtTime(0.65, ctx.currentTime);
                 masterGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
 
                 oscPrimary.connect(filter);
@@ -821,11 +855,10 @@
                 oscPrimary.stop(ctx.currentTime + duration);
                 oscHarmonic.stop(ctx.currentTime + duration);
             } catch (err) {
-                console.warn("Audio Synthesizer blocked or unsupported on device:", err);
+                console.warn("Synthesizer audio terblokir perangkat atau tidak didukung:", err);
             }
         }
 
-        // Bleep Test controller flow
         function toggleBleepTest() {
             if (isBleepRunning) {
                 pauseBleepTest();
@@ -879,7 +912,7 @@
             updateBleepUI();
 
             const speedKmh = bleepShuttleMatrix[currentLevel]?.speed || 8.5;
-            bleepIntervalDuration = (72 / speedKmh) * 1000; // Calculate 20m shuttle speed time
+            bleepIntervalDuration = (72 / speedKmh) * 1000;
 
             bleepTimer = setTimeout(() => {
                 if (!isBleepRunning) return;
@@ -907,7 +940,7 @@
         }
 
         function playSingleBeep() {
-            playBeepTone(950, 0.45); // Pitch slightly heightened for outdoor use
+            playBeepTone(950, 0.45);
         }
 
         function playLevelWhistleSound() {
@@ -926,7 +959,6 @@
             document.getElementById('total-distance').innerText = (totalShuttlesCount * 20) + ' m';
         }
 
-        // Generating scoring entries from manual copy-paste
         function generateClassListManual() {
             const rawText = document.getElementById('bulk-names-input').value.trim();
 
@@ -960,7 +992,7 @@
                     class: cls,
                     level: 1,
                     shuttle: 1,
-                    effortRating: 4 // default Aktif Berusaha (B)
+                    effortRating: 4
                 };
             });
 
@@ -979,9 +1011,9 @@
             alertMessage("Daftar Dibuat", `Berhasil memuat ${newClassList.length} siswa secara manual.`, "success");
         }
 
-        // Build scoring table with Class-filtering support
         function buildScoringGridFromStudents() {
             const tbody = document.getElementById('scoring-list-rows');
+            if (!tbody) return;
             tbody.innerHTML = '';
 
             if (studentsList.length === 0) {
@@ -991,7 +1023,7 @@
 
             let rowCount = 0;
             studentsList.forEach((s) => {
-                // Apply updated class filter
+                // Saring berdasarkan filter kelas aktif
                 if (activeScoringClass !== 'all' && s.class !== activeScoringClass) {
                     return;
                 }
@@ -1031,14 +1063,9 @@
                 `;
                 tbody.appendChild(tr);
                 
-                // Trigger dynamic shuttle limit adjustment
                 const lvlInput = tr.querySelector('.scoring-level-input');
                 validateRowMaxShuttle(s.id, lvlInput);
             });
-        }
-
-        function filterScoringGridByClass() {
-            buildScoringGridFromStudents();
         }
 
         function validateRowMaxShuttle(studentId, element) {
@@ -1054,7 +1081,6 @@
                 shuttleInput.value = maxAllowed;
             }
 
-            // Sync with local student state
             const student = studentsList.find(s => s.id === studentId);
             if (student) {
                 student.level = levelVal;
@@ -1104,7 +1130,6 @@
             alertMessage("Daftar Dibersihkan", "Seluruh isian data siswa dikosongkan.", "info");
         }
 
-        // Compute aerobic status & combined PJOK values
         function calculateAndSaveAllScoring() {
             if (studentsList.length === 0) {
                 alertMessage("Gagal Menghitung", "Tidak ada daftar siswa untuk dihitung.", "warning");
@@ -1125,7 +1150,7 @@
                 const fitness = calculateFitnessCategory(s.gender, levelVal, shuttleVal);
                 const effortData = getEffortDetails(s.effortRating || 4);
                 
-                // Final Score formula: 70% aerobic test + 30% effort
+                // Rumus Gabungan: 70% fisik + 30% sikap/partisipasi
                 const finalScore = Math.round((fitness.score * 0.70) + (effortData.score * 0.30));
 
                 return {
@@ -1201,15 +1226,14 @@
             }
         }
 
-        // Output overall results rendering
         function renderStudentsResults() {
             const searchQuery = document.getElementById('search-bar').value.toLowerCase();
             const tbody = document.getElementById('student-results-tbody');
             const emptyState = document.getElementById('empty-state');
             
+            if (!tbody) return;
             tbody.innerHTML = '';
             
-            // Filter list by Search Bar and active class tabs
             const filtered = studentsList.filter(s => {
                 const matchesSearch = s.name && s.name.toLowerCase().includes(searchQuery);
                 const matchesClass = (activeRekapClass === 'all') || (s.class === activeRekapClass);
@@ -1217,9 +1241,9 @@
             });
 
             if (filtered.length === 0 || studentsList.length === 0) {
-                emptyState.classList.remove('hidden');
+                if (emptyState) emptyState.classList.remove('hidden');
             } else {
-                emptyState.classList.add('hidden');
+                if (emptyState) emptyState.classList.add('hidden');
                 
                 filtered.forEach(student => {
                     const row = document.createElement('tr');
@@ -1273,14 +1297,17 @@
             generatePedagogicalRecommendations();
         }
 
-        // Classroom metrics computation
         function updateAllDashboards() {
             const total = studentsList.length;
-            document.getElementById('dash-total-students').innerText = total;
+            const dashTotal = document.getElementById('dash-total-students');
+            const dashAvgFit = document.getElementById('dash-avg-fitness');
+            const dashAvgAtt = document.getElementById('dash-avg-attitude');
+
+            if (dashTotal) dashTotal.innerText = total;
 
             if (total === 0) {
-                document.getElementById('dash-avg-fitness').innerHTML = '<span class="text-slate-400">Tidak ada data</span>';
-                document.getElementById('dash-avg-attitude').innerText = 'Tidak ada data';
+                if (dashAvgFit) dashAvgFit.innerHTML = '<span class="text-slate-400">Tidak ada data</span>';
+                if (dashAvgAtt) dashAvgAtt.innerText = 'Tidak ada data';
                 return;
             }
 
@@ -1310,12 +1337,14 @@
             else if (avgEffortVal >= 80) { effortLabel = 'Berusaha Aktif (B)'; effortColor = 'text-emerald-600'; }
             else if (avgEffortVal >= 70) { effortLabel = 'Cukup Kooperatif (C)'; effortColor = 'text-amber-500'; }
 
-            document.getElementById('dash-avg-fitness').innerHTML = `<span class="${color} font-black text-sm">${fitnessLabel}</span>`;
-            document.getElementById('dash-avg-attitude').innerHTML = `<span class="${effortColor} font-black text-sm">${effortLabel}</span>`;
+            if (dashAvgFit) dashAvgFit.innerHTML = `<span class="${color} font-black text-sm">${fitnessLabel}</span>`;
+            if (dashAvgAtt) dashAvgAtt.innerHTML = `<span class="${effortColor} font-black text-sm">${effortLabel}</span>`;
         }
 
         function generatePedagogicalRecommendations() {
             const container = document.getElementById('recommendation-content');
+            if (!container) return;
+
             if (studentsList.length === 0 || !studentsList[0].fitnessCategory) {
                 container.innerHTML = `<p class="italic text-slate-400 text-center py-4">Sistem akan menganalisis tren kebugaran fisik kelas 4 secara otomatis setelah guru memproses data siswa di tab "Isi Skor & Hitung".</p>`;
                 return;
@@ -1394,7 +1423,6 @@
             `;
         }
 
-        // Google Sheets Cloud API Connections
         async function testDatabaseConnection(isSilent = false) {
             const urlInput = DATABASE_SCRIPT_URL;
             
@@ -1408,7 +1436,7 @@
             updateConnectionUI(false, "Menghubungkan...");
 
             try {
-                // FORCE REDIRECT FOLLOW TO ENHANCE CORS AND REDIRECT HANDLING
+                // Gunakan mode no-cors untuk ping ringan atau GET reguler
                 const response = await fetch(urlInput, { method: "GET", redirect: "follow" });
                 if (response.ok) {
                     updateConnectionUI(true, "Awan Terhubung");
@@ -1419,7 +1447,7 @@
             } catch (err) {
                 updateConnectionUI(false, "Gagal Hubung");
                 
-                // Mendeteksi apakah aplikasi sedang berjalan di dalam Iframe Sandbox / Preview Panel
+                // Mendeteksi sandbox preview iframe
                 const isSandbox = window.origin === "null" || 
                                   (window.location.ancestorOrigins && window.location.ancestorOrigins.length > 0) || 
                                   window.location.href.includes("usercontent.goog") ||
@@ -1442,33 +1470,6 @@
             }
         }
 
-        // Menambahkan fungsi updateConnectionUI yang hilang untuk memperbarui status indikator UI
-        function updateConnectionUI(isConnected, text) {
-            const dot = document.getElementById('db-status-dot');
-            const statusText = document.getElementById('db-status-text');
-            const badge = document.getElementById('db-status-badge');
-            
-            const btnPull = document.getElementById('btn-pull-db');
-            const btnPush = document.getElementById('btn-push-db');
-
-            if (!dot || !statusText || !badge) return;
-
-            if (isConnected) {
-                dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse";
-                badge.className = "bg-emerald-950/60 border border-emerald-500 text-emerald-300 text-[10px] px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all";
-                statusText.innerText = text;
-                if (btnPull) btnPull.removeAttribute('disabled');
-                if (btnPush) btnPush.removeAttribute('disabled');
-            } else {
-                dot.className = "w-2.5 h-2.5 rounded-full bg-red-500";
-                badge.className = "bg-slate-900/60 border border-slate-700 text-slate-300 text-[10px] px-3 py-1.5 rounded-full font-bold flex items-center gap-1.5 transition-all";
-                statusText.innerText = text;
-                if (btnPull) btnPull.setAttribute('disabled', 'true');
-                if (btnPush) btnPush.setAttribute('disabled', 'true');
-            }
-        }
-
-        // PUSH DATA TO GOOGLE SHEETS
         async function pushDataToDatabase() {
             if (!DATABASE_SCRIPT_URL || DATABASE_SCRIPT_URL.includes("_TEMPEL_URL_ANDA_DI_SINI")) return;
             if (studentsList.length === 0) {
@@ -1484,6 +1485,7 @@
                     students: studentsList
                 };
 
+                // Menggunakan text/plain mencegah CORS Preflight OPTIONS request yang tidak didukung Apps Script
                 const response = await fetch(DATABASE_SCRIPT_URL, {
                     method: 'POST',
                     redirect: 'follow',
@@ -1510,7 +1512,6 @@
             }
         }
 
-        // PULL DATA FROM GOOGLE SHEETS
         async function pullDataFromDatabase() {
             if (!DATABASE_SCRIPT_URL || DATABASE_SCRIPT_URL.includes("_TEMPEL_URL_ANDA_DI_SINI")) return;
 
@@ -1544,7 +1545,6 @@
             }
         }
 
-        // Clear local storage with confirm prompts
         async function triggerClearAllData() {
             const confirmClear = await openConfirmModal(
                 "Kosongkan Seluruh Data?", 
@@ -1567,7 +1567,6 @@
             }
         }
 
-        // Standard CSV Data Exporter
         function exportToCSV() {
             if (studentsList.length === 0) {
                 alertMessage("Peringatan", "Tidak ada data siswa untuk diekspor.", "warning");
@@ -1603,7 +1602,6 @@
             alertMessage("Sukses Ekspor", "Berkas CSV siap dibuka di Excel.", "success");
         }
 
-        // Toast alert builder
         function alertMessage(title, message, type) {
             const existing = document.getElementById('app-toast');
             if (existing) existing.remove();
